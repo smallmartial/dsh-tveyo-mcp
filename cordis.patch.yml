@@ -1,0 +1,5 @@
+# 安装本插件后由 dsh.bundle.patch 应用：插入一条 Loader 条目。
+# 配置项见 README；默认只申请只读能力。
+- insert:
+    - id: dsh-tveyo-mcp
+      name: dsh-tveyo-mcp
