@@ -20,11 +20,68 @@
 
 ## 安装
 
-```sh
-dsh plugin --profile desktop add dsh-tveyo-mcp
+三条路，都不需要 npm 账号。
+
+### 1. GitHub 仓库（推荐分享时用）
+
+把本目录推到 GitHub，然后在「插件 → 添加插件」里填仓库地址：
+
+```
+https://github.com/<你>/dsh-tveyo-mcp
 ```
 
-或在 Web 的「插件 → 添加插件」里填包名 / 本地目录。
+git 安装会克隆一份副本进 profile，DSH 的运行时解析正常工作。
+
+### 2. 本地压缩包
+
+```sh
+cd dsh-tveyo-mcp && npm pack --pack-destination dist
+# 产出 dist/dsh-tveyo-mcp-0.1.0.tgz
+```
+
+在「插件 → 添加插件」里填 tarball 的绝对路径：
+
+```
+/Users/you/dsh-tveyo-mcp/dist/dsh-tveyo-mcp-0.1.0.tgz
+```
+
+### 3. 本地目录
+
+**必须带 `file:` 前缀**：
+
+```
+file:/Users/you/dsh-tveyo-mcp
+```
+
+因为 pnpm 对裸目录会记录成 `link:`（软链），而软链让插件的裸导入绕过 DSH 的
+运行时解析，启动时报 `Cannot find package '@deepseek-ai/schemastery'`。
+`file:` 会复制一份进 profile，解析正常。
+
+命令行等价写法：
+
+```sh
+dsh plugin --profile desktop add file:/Users/you/dsh-tveyo-mcp
+```
+
+### 没有 npm 账号怎么办
+
+上面的三种方式都不需要 npm 账号。若仍想要一个 registry 形式的分发源：
+
+| 方式 | 是否需要 npm 账号 | 说明 |
+|---|---|---|
+| npmjs 官方源 | 需要 | 唯一能 `npm publish` 的公共源 |
+| registry.npmmirror.com | — | **只读镜像，不能发布** |
+| GitHub Packages | 需要 GitHub 账号 | registry 填 `https://npm.pkg.github.com/`；包名必须是 `@用户名/xxx` 形式 |
+| 自建 Verdaccio | 不需要 | `npx verdaccio` 起本地源，发布后把地址填进「自定义地址」，凭据写 `~/.npmrc` |
+
+自建源的最小步骤：
+
+```sh
+npx verdaccio                       # 默认 http://localhost:4873
+npm publish --registry http://localhost:4873
+```
+
+然后在「添加插件 → 安装源 → 自定义地址」填 `http://localhost:4873/`。
 
 ## 配置
 
