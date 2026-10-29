@@ -1,6 +1,6 @@
 {
   "name": "dsh-tveyo-mcp",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "把旅映（tveyo）MCP 接入 DeepSeek Harness：原生 authorization 授权流程、令牌自动刷新、13 个策展工具与插件页状态卡片。",
   "type": "module",
   "main": "lib/index.js",
