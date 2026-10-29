@@ -11,10 +11,10 @@
 | | 官方 mcp-client | 本插件 |
 |---|---|---|
 | 认证 | 静态 Header | 旅映账号 OAuth + 自动刷新 |
+| 授权入口 | 无 | DSH 插件页卡片（原生 `ctx.authorization` flow） |
 | 工具名 | `mcp__tveyo__list_creation_tasks` | `tveyo_tasks` |
-| 工具数 | 23 个全量 | 8 个（可再收窄） |
-| 授权入口 | 无 | 本机 `http://127.0.0.1:45871` |
-| 撤销 | 改配置重启 | 状态页一键断开 |
+| 工具数 | 23 个全量 | 13 个（按 scope 自动收窄） |
+| 撤销 | 改配置重启 | 卡片一键断开，并调用旅映撤销接口 |
 
 业务逻辑没有复制：所有调用仍然发给 `https://app.tveyo.com/api/mcp`。
 
@@ -107,6 +107,7 @@ npm publish --registry http://localhost:4873
 | `enableCreationRead` | `false` | 注册选题/任务/技能读取工具 |
 | `enableCreationWrite` | `false` | 注册领取/交付/上传等写入工具 |
 | `requestTimeoutMs` | `60000` | 单次调用超时 |
+| `autoOpenBrowser` | `true` | 发起授权时自动打开系统浏览器 |
 
 **写入默认关闭。** 要启用创作写入，三处必须同时成立：配置里打开
 `enableCreationWrite`、`scopes` 里加 `creation:write`、旅映授权页勾选「创作写入」。
@@ -114,14 +115,28 @@ npm publish --registry http://localhost:4873
 
 ## 连接
 
-安装后打开 <http://127.0.0.1:45871/>：
+安装并启用后，打开「设置 → 插件 → 旅映 MCP」：
 
-1. 点「连接旅映」→ 跳转旅映登录页
-2. 用旅映账号登录，选择要共享的空间、勾选能力
-3. 回调完成后自动回到状态页，显示账号、空间、工具清单
+1. 卡片显示「需要授权」
+2. 点「连接旅映」→ 系统浏览器自动打开旅映登录页
+3. 登录、选择空间与能力 → 回调完成后卡片自动变成「已连接」
+4. 卡片上能看到已授权的空间、工具数量
+
+不需要记端口，也不需要手动打开任何本地地址。授权过程走 DSH 原生的
+`ctx.authorization` 流程，因此在任何支持该流程的界面里都能发起。
 
 令牌存在 DSH 凭据存储（`$DSH_HOME/.credentials.yaml`）的
 `dsh-tveyo-mcp/oauth` 记录里，不进配置文件、不进日志、不进会话。
+
+### 断开
+
+卡片上的「断开连接」会：
+
+1. 调用旅映的撤销端点（RFC 7009）作废 refresh token
+2. 删除本地凭据记录
+3. 关闭 MCP 连接并撤下全部工具
+
+即使撤销请求失败，本地记录也会删除，下次必须重新授权。
 
 ## 工具
 
@@ -153,13 +168,18 @@ npm publish --registry http://localhost:4873
 | `tveyo_create_topic` | `create_topic` |
 | `tveyo_create_task` | `create_creation_task` |
 
-## 为什么固定端口
+## 为什么还有一个固定端口
 
-旅映的动态客户端注册会把 `redirect_uri` 绑进 client_id，刷新令牌也绑在这个客户端上。
-如果回调地址随 DSH 端口漂移，每次重启都会丢掉授权。插件因此自己起一个只监听
-`127.0.0.1` 的小服务，固定端口 `45871`（被占用时依次尝试 `45872`、`45873`）。
+旅映的 OAuth 只接受 `https` 或**本机 loopback** 回调（自定义 scheme 会被拒绝：
+`Redirect URI must use https, or http on a loopback host`）。而 DSH 桌面版的端口
+每次启动随机，跟着它漂移会让 client_id 与 refresh token 一起失效。
 
-端口变化时旧授权会作废，插件会提示重新连接，而不是抛 OAuth 错误。
+所以插件保留一个只监听 `127.0.0.1` 的回调服务，固定端口 `45871`
+（被占用时依次尝试 `45872`、`45873`）。它**只接 OAuth 回调**，用户看不到，
+也不需要访问它。
+
+注册时一次性提交三个端口，多实例各占一个也不会互相踢掉授权。
+端口变化时旧授权会作废，卡片会提示重新连接，而不是抛 OAuth 错误。
 
 ## 安全边界
 
@@ -167,7 +187,7 @@ npm publish --registry http://localhost:4873
 - 回调校验 `state`，防授权码注入
 - 令牌只存凭据存储；状态页与 `/status` 只报告"有没有令牌"，从不返回值
 - 旅映返回的作品、评论、模型输出是**数据**，不是指令；插件原样透传，不做解释
-- 断开连接会删除本地记录，但不会调用旅映的撤销接口——要彻底撤销请到旅映网站「Agent 中心 → MCP 连接」
+- 断开连接会同时调用旅映撤销接口；如需在旅映侧核对历史授权，去「Agent 中心 → MCP 连接」
 
 ## 已知限制
 

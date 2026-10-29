@@ -1,11 +1,12 @@
 {
   "name": "dsh-tveyo-mcp",
-  "version": "0.1.0",
-  "description": "把旅映（tveyo）MCP 接入 DeepSeek Harness：旅映账号 OAuth 登录、令牌自动刷新，并把 23 个原始工具策展成 8 个短名工具。",
+  "version": "0.2.0",
+  "description": "把旅映（tveyo）MCP 接入 DeepSeek Harness：原生 authorization 授权流程、令牌自动刷新、13 个策展工具与插件页状态卡片。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -27,6 +28,15 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings-plugins",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
     }
   }
 }
